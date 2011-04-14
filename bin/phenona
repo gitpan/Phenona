@@ -1,0 +1,117 @@
+#!/usr/bin/env perl
+
+# PODNAME: phenona
+# ABSTRACT: Deploy apps to the Phenona platform
+
+use strict;
+use warnings;
+
+use Phenona::Deploy;
+
+use LWP::Simple qw(get);
+
+use IO::Prompt;
+use YAML::Any qw(DumpFile LoadFile);
+
+my $usage = <<'END_USAGE';
+Usage: phenona deploy [path]
+
+Try `perldoc phenona` for more options.
+END_USAGE
+
+my $command = shift @ARGV;
+
+if( defined $command && $command eq 'deploy' ) {
+    my $path = shift @ARGV || '.';
+    my $phenona_info_path = "$path/.phenona";
+
+    my $my_api_version      = $Phenona::Deploy::VERSION;
+    my $minimum_api_version = get('http://www.phenona.com/api/min_api_ver') || 0;
+
+    if( $my_api_version < $minimum_api_version ) {
+	die "Your Phenona client is too old to work with the current API. Please upgrade via 'cpanm Phenona' or otherwise.\n";
+    }
+
+    my $projectid;
+    my $apikey;
+    
+    if( -e $phenona_info_path ) {
+	my $data = LoadFile( $phenona_info_path );
+	$projectid = $data->{projectid};
+	$apikey = $data->{apikey};
+    }
+    else {
+    	$projectid = "" . prompt 'Please enter your project ID: ' . ""; # stringify IO::Prompt object
+	$apikey = "" . prompt 'Please enter your API key: ' . "";
+	DumpFile( $phenona_info_path, { projectid => $projectid, apikey => $apikey } );
+    }    
+
+
+    Phenona::Deploy->deploy({ projectid => $projectid, apikey => $apikey });
+}
+else {
+    die $usage;
+}
+
+
+__END__
+=pod
+
+=head1 NAME
+
+phenona - Deploy apps to the Phenona platform
+
+=head1 VERSION
+
+version 0.003
+
+=head1 SYNOPSIS
+
+    phenona deploy 			# deploys from current directory
+    
+    phenona deploy /home/you/myapp      # deploys the app in /home/you/myapp
+
+=head1 COMMANDS
+
+=over 4
+
+=item deploy
+
+Deploys the Perl app from the provided directory into Phenona. It will prompt you
+for your project ID and API key once, and store it in a C<.phenona> file in your 
+project's directory. 
+
+=back
+
+=head1 IMPORTANT NOTES
+
+=head2 .manifest file
+
+Your app's directory should contain a C<.manifest> file which lists your app's
+dependencies, one per line. If your app is a distribution and your dependencies 
+are specified in the Makefile.PL or Build.PL, you do not need to provide a 
+C<.manifest> file.
+
+=head2 Deployment
+
+The SSH public key you provided to Phenona should be the default one on your 
+machine (you'll be able to specify a custom keyfile in a later release).
+
+The deployment process will ask for your project ID and API key once, which
+are both provided on your app management page. Further deploys will not
+ask for either key, they'll be saved in the C<.phenona> file in your app's
+directory.
+
+=head1 AUTHOR
+
+Daniil Kulchenko <daniil@kulchenko.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Daniil Kulchenko.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
+

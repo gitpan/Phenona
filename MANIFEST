@@ -1,0 +1,9 @@
+LICENSE
+MANIFEST
+META.yml
+Makefile.PL
+bin/phenona
+dist.ini
+lib/Phenona.pm
+lib/Phenona/Deploy.pm
+t/use.t
